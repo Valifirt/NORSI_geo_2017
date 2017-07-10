@@ -5,16 +5,27 @@
 #include <set>
 #include <cmath>
 
-#include "parser_graph.h"
+#include "parser.h"
 
 int main() {
 
-    // TODO: read path
     std::string path = "/home/valya/ClionProjects/NORSI_geo_2017/OSM_files/RU-TY.osm";
 
-    std::ifstream f(path);
+//    std::string path;
+//    std::cin >> path;
 
-    parser(f);
+    std::string name_file;
+    name_file = path.substr(path.rfind("/") + 1, path.rfind(".") - path.rfind("/")-1);
+    std::ifstream f;
+    std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std::pair<unsigned long, float>>>>  p;
+
+    f.open(path.substr(0, path.rfind("OSM")-1) + "/graph/" + name_file + "_graph");
+    if (f){
+       std::cout << "file graph is ready" << std::endl;
+    } else {
+        f.open(path);
+        p = parser_osm(f, name_file);
+    }
 
     return 0;
 }
