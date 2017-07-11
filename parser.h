@@ -15,7 +15,10 @@ struct Node {
     unsigned long id;
 };
 
+//parse osm and do grahp file + return two maps
 std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std::pair<unsigned long, float>>>> parser_osm(std::ifstream &in,std::string s);
+
+//parse graph and return two maps
 std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std::pair<unsigned long, float>>>> parser_graph(std::ifstream &in);
 
 #endif //NORSI_GEO_2017_PARSER_OSM_H

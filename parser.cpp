@@ -29,7 +29,7 @@ float long_dist(Node from, Node to) {
     float c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
     float d = R * c; // Distance in km
 
-    return d;
+    return d*1000;
 }
 
 float short_dist(Node from, Node to) {
@@ -60,8 +60,8 @@ std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std
             p.second.insert(std::pair<unsigned long, std::vector<std::pair<unsigned long, float>>>(node.id, v));
         } else if (line.find("<way") != std::string::npos) {
 
-            unsigned long first_node;
             bool k = true;
+            unsigned long first_node;
 
             while (true) {
                 std::getline(in, line);
@@ -114,20 +114,25 @@ std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std
     std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std::pair<unsigned long, float>>>> p;
     std::string line;
 
-    std::getline(in,line);
+    std::getline(in, line);                     // name of file
+    std::getline(in, line);                     // Nodes
 
-    while(std::getline(in,line)){
-        getline(in,line);
-        while(line.find("Ways")!= std::string::npos){
-            Node n;
-            n.id = std::stoul(line.substr(0, line.find(" ") - 1));
-            n.lat = std::stof(line.substr(line.find(" ") + 1, line.rfind(" ") - line.find(" ") - 1));
-            n.lon = std::stof(line.substr(line.rfind(" ")));
+    while (std::getline(in,line) && line.find("Ways") == std::string::npos){
+        Node n;
+        n.id = std::stoul(line.substr(0, line.find(" ")), nullptr, 10);
+        n.lat = std::stof(line.substr(line.find(" ") + 1, line.rfind(" ") - line.find(" ") - 1));
+        n.lon = std::stof(line.substr(line.rfind(" ")));
 
-            p.first.insert(std::pair<unsigned long, Node>(n.id, n));
-        }
+        p.first.insert(std::pair<unsigned long, Node>(n.id, n));
+        std::vector<std::pair<unsigned long, float>> v;
 
-
-
+        p.second.insert(std::pair<unsigned long,std::vector<std::pair<unsigned long, float>>>(n.id, v));
     }
+
+    while (std::getline(in,line)){
+        unsigned long id = std::stoul(line.substr(0, line.find(" ")), nullptr, 10);
+        p.second[id].push_back(std::pair<unsigned long, float>(std::stoul(line.substr(0, line.find(" ")), nullptr, 10), std::stof(line.substr(line.rfind(" ")))));
+    }
+
+    return p;
 };

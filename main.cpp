@@ -22,6 +22,7 @@ int main() {
     f.open(path.substr(0, path.rfind("OSM")-1) + "/graph/" + name_file + "_graph");
     if (f){
        std::cout << "file graph is ready" << std::endl;
+        p = parser_graph(f);
     } else {
         f.open(path);
         p = parser_osm(f, name_file);
