@@ -106,6 +106,24 @@ std::pair<std::map<unsigned long, Node>, std::map<unsigned long, std::vector<std
 
     out.close();
 
+    std::ofstream out_print;
+
+    out_print.open("/home/valya/ClionProjects/NORSI_geo_2017/graph/" + s + "_graph_for_print");
+
+    out_print << "graph {" << std::endl;
+    for (auto n : p.first) {
+        out_print << "\t" << n.first << " [longitude=" << n.second.lon << ", latitude=" << n.second.lat << "]" << std::endl;
+    }
+
+
+    for (auto w : p.second) {
+        for (auto v : w.second)
+            out_print << "\t" << w.first << " -- " << v.first << std::endl;
+    }
+    out_print << "}" << std::endl;
+
+    out_print.close();
+
     return p;
 }
 
