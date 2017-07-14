@@ -1,5 +1,5 @@
 //
-// Created by valya on 12/07/17.
+// Created by Valifirt on 12/07/17.
 //
 
 #ifndef NORSI_GEO_2017_DIJSTRA_H
@@ -14,6 +14,6 @@
 #include <unordered_set>
 #include "parser.h"
 
-std::pair<float, std::vector<unsigned long>> dijkstra(std::unordered_map<unsigned long, std::vector<vertex>> &graph, unsigned long source, unsigned long end);
+std::pair<float, std::vector<unsigned int>> dijkstra(std::unordered_map<unsigned int , std::vector<vertex>> &graph, unsigned int source, unsigned int end);
 
 #endif //NORSI_GEO_2017_DIJSTRA_H

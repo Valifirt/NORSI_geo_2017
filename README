@@ -1,0 +1,18 @@
+***  ADM ***
+
+in args:
+    path to the *.osm file
+    nodes
+
+return:
+    create dir ~/out_way
+    create local_time.osc file
+
+    in dir graph file
+
+exits:
+    0 : Success
+    1 : Error args programm
+	2 : No osm file in dir
+	3 : No this point in map
+	4 : Can't create way
