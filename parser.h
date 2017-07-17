@@ -16,7 +16,7 @@ struct Node {
     std::string id;
 };
 
-typedef std::pair<unsigned long, float> vertex;
+typedef std::pair<unsigned int, float> vertex;
 struct vertex_comp {
     bool operator()(const vertex &a, const vertex &b) { return a.second > b.second; }
 };
