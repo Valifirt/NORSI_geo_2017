@@ -19,15 +19,15 @@ int main(int argc, char **argv) {
     std::string path = argv[1];
 
     Graph graph(path);
-//
-//    std::vector<std::string> vector_nodes;
-//
-//    for(int i = 2; i < argc ; i++){
-//        std::string point = argv[i];
-//        vector_nodes.push_back(point);
-//    }
-//
-//    graph.short_way(vector_nodes);
+
+    std::vector<std::string> vector_nodes;
+
+    for(int i = 2; i < argc ; i++){
+        std::string point = argv[i];
+        vector_nodes.push_back(point);
+    }
+
+    graph.short_way(vector_nodes);
 
     return 0;
 }
