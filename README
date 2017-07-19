@@ -16,3 +16,10 @@ exits:
 	2 : No osm file in dir
 	3 : No this point in map
 	4 : Can't create way
+	5 : No this way in map
+	6 : Error in parsing osm, unknown role
+    7 : Unknown restriction
+        0 : new restriction
+        1 : new restriction NO     in work
+        2 : new restricntio ONLY   in work
+    8 : No this point in this way
