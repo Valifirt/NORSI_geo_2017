@@ -168,9 +168,6 @@ void Graph::parser_osm(std::ifstream &in) {
                                 exit(5);
                             }
                         }
-                    } else {
-                        std::cout << line << std::endl;
-                        exit(6);
                     }
                 } else if (line.find("<tag") != std::string::npos){
                     size_t a = line.find("\"");
@@ -212,16 +209,22 @@ void Graph::parser_osm(std::ifstream &in) {
      *             n of nodes
      *             number_node id_in_map lat lon
      *             ...
-     *             Ways
-     *             n of edges
+     *             Edges
      *             number_first_node number_second_node len
+     *             ...
+     *             Restriction
+     *             No
+     *             from via to
+     *             ...
+     *             ONLY
+     *             from via to
      *             ...
      *
      * out_for_print creates *.dot
      * */
 
-    out.open(work_dir + "parser_osm/graph/" + name + "_graph");
-    out_print.open(work_dir + "parser_osm/graph/" + name + "_graph_for_print.dot");
+    out.open(work_dir + "graph/" + name + "_graph");
+    out_print.open(work_dir + "graph/" + name + "_graph_for_print.dot");
 
     out << name << std::endl;
     out << "Nodes " << "\n" << n_nodes << std::endl;
