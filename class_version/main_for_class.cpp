@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
     std::string path = argv[1];
 
-    Graph graph(argv[1]);
+    Graph graph(path);
 
     std::vector<std::string> vector_nodes;
 

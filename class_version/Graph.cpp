@@ -1,5 +1,5 @@
 //
-// Created by valya on 13/07/17.
+// Created by Valifirt on 17/07/17.
 //
 
 #include <iostream>
@@ -8,6 +8,7 @@
 #include <queue>
 #include <limits>
 #include <sys/stat.h>
+#include <cstring>
 #include "Graph.h"
 
 Graph::Graph(std::string path) {
@@ -16,18 +17,12 @@ Graph::Graph(std::string path) {
     this->work_dir = path.substr(0,path.rfind("/osm") + 1);
 
     std::ifstream f;
-    f.open(work_dir + "graph/" + name + "_graph");
-
-    if (f){
-        parser_graph(f);
-    } else {
-        f.open(path);
-        if (!f){
-            std::cout << "Can't find *.osm file" << std::endl;
-            exit(2);
-        }
-        parser_osm(f);
+    f.open(path);
+    if (!f){
+        std::cout << "Can't find *.osm file" << std::endl;
+        exit(2);
     }
+    parser_osm(f);
 }
 
 float deg2rad(float deg) {
@@ -62,9 +57,8 @@ float Graph::short_dist(Node from, Node to) {
 void Graph::parser_osm(std::ifstream &in) {
 
     std::string line;
-    unsigned int number = 0;
-
-    std::ofstream out, out_print;
+    unsigned int number_nodes = 1;
+    unsigned int number_ways = 1;
 
     while (std::getline(in, line)) {
         if (line.find("<node") != std::string::npos) {
@@ -79,14 +73,19 @@ void Graph::parser_osm(std::ifstream &in) {
             node.lat = std::stof(line.substr(lat, lon - 7 - lat));
             node.lon = std::stof(line.substr(lon, line.rfind("\"") - lon));
 
-            map_inf.insert({node.id,number});
-            map_nodes.insert({number,node});
-            std::vector<vertex> v;
-            map_ways.insert({number, v});
+            map_inf_nodes.insert({node.id,number_nodes});
+            map_nodes.insert({number_nodes,node});
 
-            number++;
+            number_nodes++;
 
         } else if (line.find("<way") != std::string::npos) {
+
+            Way way;
+            size_t b = line.find("\"") + 1;
+            way.id = line.substr(b, line.find("ver") - b - 2);
+//            if (way.id == "42490814"){
+//                std::cout << "dfgh" << std::endl;
+//            }
 
             bool k = true;
             unsigned int first_node;
@@ -99,54 +98,143 @@ void Graph::parser_osm(std::ifstream &in) {
                     if (k) {
                         std::size_t a = line.find("ref=") + 5;
                         l = line.substr(a, line.rfind("\"") - a );
-                        if (map_inf.find(l) != map_inf.end()){
+                        if (map_inf_nodes.find(l) != map_inf_nodes.end()){
                             k = false;
-                            first_node = map_inf[l];
+                            first_node = map_inf_nodes[l];
+                            way.vector_nodes.push_back(first_node);
                         }
                     } else {
                         unsigned int second_node;
                         std::size_t a = line.find("ref=") + 5;
                         l = line.substr(a, line.rfind("\"") - a );
-                        second_node = map_inf[l];
-                        if (map_inf.find(l) != map_inf.end()){
+                        if (map_inf_nodes.find(l) != map_inf_nodes.end()){
+                            second_node = map_inf_nodes[l];
                             float len = long_dist(map_nodes[first_node], map_nodes[second_node]);
-                            map_ways[first_node].push_back({second_node, len});
-                            map_ways[second_node].push_back({first_node, len});
+                            map_edges[first_node].insert({second_node, len});
+                            map_edges[second_node].insert({first_node, len});
+//                            way.vector_nodes[first_node] = second_node;
+                            way.vector_nodes.push_back(second_node);
                             first_node = second_node;
                         }
                     }
+                } else if (line.find("<tag k=\"oneway\"") != std::string::npos && line.rfind("yes") != std::string::npos){
+                    for (int x = 1; x < way.vector_nodes.size(); x++){
+                        map_edges[way.vector_nodes[x]].erase(way.vector_nodes[x-1]);
+                    }
                 }
             }
+            map_inf_ways.insert({way.id,number_ways});
+            map_ways.insert({number_ways,way});
+            number_ways++;
+
+        }else if(line.find("<relation") != std::string::npos){
+//            auto id_rest = line.substr(line.find("\"")+1, line.find("\" ver") - line.find("\"")-1);
+            unsigned int from = 0, to = 0, via = 0;
+            while(1){
+                std::getline(in, line);
+                if (line.find("</relation") != std::string::npos) { break; };
+                if (line.find("<mem") != std::string::npos){
+                    size_t first,last;
+                    first = line.find("\"");
+                    last = line.rfind("\"");
+                    std::string id = line.substr(line.find("ref=\"") + 5, line.rfind("role=") - line.find("ref=\"") -7);
+                    if ( line[last-1] == 'a' ){
+                        if (line[first+1] == 'w' && map_inf_ways.find(id) != map_inf_ways.end()){
+                            via = map_inf_ways[id];
+                            if (via == 0){
+                                std::cout << "way_via: " << id << std::endl;
+                                exit(5);
+                            }
+                        } else if (map_inf_nodes.find(id) != map_inf_nodes.end()){
+                            via = map_inf_nodes[id];
+                            if (via == 0){
+                                std::cout << "node_via: " << id << std::endl;
+                                exit(3);
+                            }
+                        }
+                    } else if (line[last-1] == 'm'){
+                        if (map_inf_ways.find(id) != map_inf_ways.end()){
+                            from = map_inf_ways[id];
+                            if (from == 0){
+                                std::cout << "from: " << id << std::endl;
+                                exit(5);
+                            }
+                        }
+                    } else if (line[last-1] == 'o'){
+                        if (map_inf_ways.find(id) != map_inf_ways.end()){
+                            to = map_inf_ways[id];
+                            if (to == 0){
+                                std::cout << "to: " << id << std::endl;
+                                exit(5);
+                            }
+                        }
+                    } else {
+                        std::cout << line << std::endl;
+                        exit(6);
+                    }
+                } else if (line.find("<tag") != std::string::npos){
+                    size_t a = line.find("\"");
+                    if (!strcmp(line.substr(a+1,11 ).c_str(), "restriction") && via != 0 && from != 0 && to != 0){
+//                    if (line.substr(a+1,11 )== "restriction" ){
+                        std::string rest;
+                        rest = line.substr(line.find("v=\"")+3, line.rfind("\"") - line.find("v=\"")-3);
+                        if (rest[0] == 'n'){
+                            if (!strcmp(rest.c_str(), "no_entry")){
+                                map_edges[via].erase(get_id_in_ways(to,via));
+                            } else if (!strcmp(rest.c_str(), "no_exit")){
+                                map_edges[from].erase(get_id_in_ways(from,via));
+                            } else {
+                                no_way[via].insert({get_id_in_ways(from, via), get_id_in_ways(to,via)});
+                            }
+                        } else if (rest[0] == 'o') {
+                            one_way[via].insert({get_id_in_ways(from, via), get_id_in_ways(to,via)});
+                        } else {
+                            std::cout << "Unknown restriction" << std::endl;
+                            exit(7);
+                        }
+                        from = 0, to = 0, via = 0;
+                    }
+                }
+            }
+
         }
     }
+
+    this->n_nodes = number_nodes-1;
+
+    std::ofstream out, out_print;
 
     // version for parse and future work, version for print
     /*
      * out creates *_graph. Format:
      *             name of map
+     *             Nodes
      *             n of nodes
      *             number_node id_in_map lat lon
      *             ...
+     *             Ways
+     *             n of edges
      *             number_first_node number_second_node len
      *             ...
      *
      * out_for_print creates *.dot
      * */
 
-    out.open(work_dir + "graph/" + name + "_graph");
-    out_print.open(work_dir + "graph/" + name + "_graph_for_print.dot");
+    out.open(work_dir + "parser_osm/graph/" + name + "_graph");
+    out_print.open(work_dir + "parser_osm/graph/" + name + "_graph_for_print.dot");
 
-    out << name << "\n" << number << std::endl;
+    out << name << std::endl;
+    out << "Nodes " << "\n" << n_nodes << std::endl;
     out_print << "graph {" << std::endl;
-
-    this->n_nodes = number;
 
     for (auto v : map_nodes){
         out << v.first << " " << v.second.id << " "  << v.second.lat << " " << v.second.lon << "\n";
-        out_print << "\t" << number << " [latitude =" << v.second.lat << ", longitude=" << v.second.lon << "]" << std::endl;
+        out_print << "\t" << v.second.id << " [latitude =" << v.second.lat << ", longitude=" << v.second.lon << "]" << std::endl;
     }
 
-    for (auto v : map_ways){
+    out << "Edges " << std::endl;
+
+    for (auto v : map_edges){
         for (auto w : v.second){
             out << v.first << " " << w.first << " " << w.second << "\n";
             out_print << "\t" << v.first << " -- " << w.first << std::endl;
@@ -155,44 +243,52 @@ void Graph::parser_osm(std::ifstream &in) {
 
     out_print << "}" << std::endl;
 
+    out << "Restriction" << std::endl;
+    out << "NO" << std::endl;
+
+    for (auto rest : no_way){
+        for (auto v : rest.second){
+            out << v.first<< " " << rest.first << " " << v.second << std::endl;
+        }
+    }
+
+    out << "ONLY" << std::endl;
+
+    for (auto rest : one_way){
+        for (auto v : rest.second){
+            out << v.first<< " " << rest.first << " " << v.second << std::endl;
+        }
+    }
+
     out.close();
     out_print.close();
 }
 
-void Graph::parser_graph(std::ifstream &in) {
+unsigned int Graph::get_id_in_ways(unsigned int first, unsigned int second) {
 
-    std::string line;
-
-    std::getline(in, line);                     // name of file
-    in >> this->n_nodes;
-
-    for( ;n_nodes > 0; n_nodes--){
-        Node node;
-        unsigned int number;
-        in >> number >> node.id >> node.lat >> node.lon;
-
-        map_inf.insert({node.id, number});
-        map_nodes.insert({number, node});
-        std::vector<vertex> v;
-        map_ways.insert({number,v});
+    unsigned int id;
+    if (map_ways[first].vector_nodes[0] == second){
+        id =  map_ways[first].vector_nodes[1];
+    } else {
+        id = map_ways[first].vector_nodes[map_ways[first].vector_nodes.size()-2];
     }
-
-    unsigned int first, second;
-    float len;
-    while( in >> first >> second >> len ){
-        map_ways[first].push_back({second,len});
-        map_ways[second].push_back({first,len});
+    if (id == 0){
+        std::cout << "in " << map_ways[first].id << " " << map_nodes[second].id << std::endl;
+        exit(8);
     }
-};
+    return id;
+}
 
 void Graph::short_way(std::vector<std::string> nodes) {
     std::pair<float, std::vector<unsigned int>> c;
 
     for(int i = 0; i < nodes.size()-1; i++){
-        auto res = dijkstra(map_inf[nodes[i]], map_inf[nodes[i+1]]);
+        auto res = dijkstra(map_inf_nodes[nodes[i]], map_inf_nodes[nodes[i+1]]);
         c.first += res.first;
         std::copy(res.second.begin(), res.second.end(), back_inserter(c.second));
     }
+
+    c.second.push_back(map_inf_nodes[nodes[nodes.size()-1]]);
 
     output_to_osc(c.first, c.second);
 }
@@ -201,7 +297,7 @@ std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source,
     std::priority_queue<vertex, std::vector<vertex>, vertex_comp> Q;
     std::unordered_map<unsigned int, float> dist;
     std::unordered_map<unsigned int, unsigned int> short_way;
-    for (const auto &v : map_ways) { dist[v.first] =  std::numeric_limits<float>::infinity(); }
+    for (const auto &v : map_edges) { dist[v.first] =  std::numeric_limits<float>::infinity(); }
 
     Q.push({source, 0});
     while (!Q.empty()) {
@@ -213,22 +309,36 @@ std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source,
             dist[u.first] = u.second;
         }
 
-        for (const auto &v : map_ways[u.first]) {
-            float alt = dist[u.first] + v.second;
-            if (alt < dist[v.first]) {
-                Q.push({v.first, alt});
-                dist[v.first] = alt;
-                short_way[v.first] = u.first;
+        /*
+         *  в short_dist сохраняется предшественник на поворотах!
+         *  в for делать проверку на наличие в map
+         *  и либо записывать, либо нет
+         * */
+        auto one = 0;
+        auto no = 0;
+        if (one_way.find(u.first) != one_way.end() && one_way[u.first].find(short_way[u.first]) != one_way[u.first].end()){
+            one = one_way[u.first][short_way[u.first]];
+        }
+        if (no_way.find(u.first) == no_way.end() || no_way[u.first].find(short_way[u.first]) == no_way[u.first].end()){
+            no = no_way[u.first][short_way[u.first]];
+        }
+        for (const auto &v : map_edges[u.first]) {
+            if ((one == 0 || (one == v.first)) && (no == 0 || no != v.first) ){
+                float alt = dist[u.first] + v.second;
+                if (alt < dist[v.first]) {
+                    Q.push({v.first, alt});
+                    dist[v.first] = alt;
+                    short_way[v.first] = u.first;
+                }
             }
         }
 
         if (u.first == end){
             std::vector<unsigned int> way;
             unsigned int v = end;
-            way.push_back(v);
             while(1){
                 v = short_way[v];
-                way.push_back(v);
+                way.insert(way.begin(), v);
                 if (v == source){
                     break;
                 }
@@ -256,7 +366,7 @@ void Graph::output_to_osc(float dist, std::vector<unsigned int> way) {
 
     std::string name_file;
     name_file += std::to_string(timeinfo->tm_year + 1900);
-    name_file += "_" + std::to_string(timeinfo->tm_mon);
+    name_file += "_" + std::to_string(timeinfo->tm_mon + 1);
     name_file += "_" + std::to_string(timeinfo->tm_mday) ;
     name_file += "_" + std::to_string(timeinfo->tm_hour);
     name_file += ":" + std::to_string(timeinfo->tm_min);
