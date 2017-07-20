@@ -184,7 +184,11 @@ void Graph::parser_osm(std::ifstream &in) {
                                 no_way[via].insert({get_id_in_ways(from, via), get_id_in_ways(to,via)});
                             }
                         } else if (rest[0] == 'o') {
-                            one_way[via].insert({get_id_in_ways(from, via), get_id_in_ways(to,via)});
+                            auto from_node = get_id_in_ways(from, via);
+                            auto to_node = get_id_in_ways(to,via);
+                            map_edges[from_node].insert({to_node,map_edges[from_node][via] + map_edges[via][to_node]});
+                            map_edges[from_node].erase(via);
+                            one_way[to_node].insert({from_node, via});
                         } else {
                             std::cout << "Unknown restriction" << std::endl;
                             exit(7);
@@ -239,7 +243,7 @@ void Graph::parser_osm(std::ifstream &in) {
 
     for (auto v : map_edges){
         for (auto w : v.second){
-            out << v.first << " " << w.first << " " << w.second << "\n";
+            out << map_nodes[v.first].id << " " << map_nodes[w.first].id << " " << map_nodes[w.second].id << "\n";
             out_print << "\t" << v.first << " -- " << w.first << std::endl;
         }
     }
@@ -251,7 +255,7 @@ void Graph::parser_osm(std::ifstream &in) {
 
     for (auto rest : no_way){
         for (auto v : rest.second){
-            out << v.first<< " " << rest.first << " " << v.second << std::endl;
+            out << map_nodes[v.first].id << " " << map_nodes[rest.first].id << " " << map_nodes[v.second].id << std::endl;
         }
     }
 
@@ -259,7 +263,7 @@ void Graph::parser_osm(std::ifstream &in) {
 
     for (auto rest : one_way){
         for (auto v : rest.second){
-            out << v.first<< " " << rest.first << " " << v.second << std::endl;
+            out << v.first << " " << v.second << " " << rest.first << std::endl;
         }
     }
 
@@ -317,16 +321,12 @@ std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source,
          *  в for делать проверку на наличие в map
          *  и либо записывать, либо нет
          * */
-        auto one = 0;
         auto no = 0;
-        if (one_way.find(u.first) != one_way.end() && one_way[u.first].find(short_way[u.first]) != one_way[u.first].end()){
-            one = one_way[u.first][short_way[u.first]];
-        }
-        if (no_way.find(u.first) == no_way.end() || no_way[u.first].find(short_way[u.first]) == no_way[u.first].end()){
+        if (no_way.find(u.first) != no_way.end() && no_way[u.first].find(short_way[u.first]) != no_way[u.first].end()){
             no = no_way[u.first][short_way[u.first]];
         }
         for (const auto &v : map_edges[u.first]) {
-            if ((one == 0 || (one == v.first)) && (no == 0 || no != v.first) ){
+            if (no == 0 || no != v.first){
                 float alt = dist[u.first] + v.second;
                 if (alt < dist[v.first]) {
                     Q.push({v.first, alt});
@@ -340,7 +340,11 @@ std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source,
             std::vector<unsigned int> way;
             unsigned int v = end;
             while(1){
-                v = short_way[v];
+                auto w = short_way[v];
+                if (one_way.find(v) != one_way.end() && one_way[v].find(w) != one_way[v].end()){
+                    way.insert(way.begin(),one_way[v][w]);
+                }
+                v = w;
                 way.insert(way.begin(), v);
                 if (v == source){
                     break;
