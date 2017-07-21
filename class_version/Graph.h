@@ -21,11 +21,18 @@ private:
     struct Node {
         float lat, lon;
         std::string id;
+        std::map<unsigned int, unsigned int> map_rest;
     };
 
     typedef std::pair<unsigned int, float> vertex;
     struct vertex_comp {
         bool operator()(const vertex &a, const vertex &b) { return a.second > b.second; }
+    };
+
+    struct nodes_comp{
+        bool operator()(const unsigned int &a, const unsigned int &b){
+            return a > b;
+        }
     };
 
     struct Way{
@@ -45,8 +52,8 @@ private:
     std::map<std::string, unsigned int> map_inf_ways;                                                   // map: {string id -> int id (from 1 to n_of_ways)}
     std::map<unsigned int,Way> map_ways;                                                                // map: {int id -> Way}
     std::map<unsigned int, std::map<unsigned int, unsigned int>> no_way;                                // map: {via -> {from,to}} can't create way here
-                                                                                                        // (from, to , via is id of nodes)
-    std::map<unsigned int, std::map<unsigned int, unsigned int >> one_way;                  // map: {from -> {to, via}} can go only here
+    // (from, to , via is id of nodes)
+    std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, float,nodes_comp>>> one_way;                  // map: {from -> {to, via}} can go only here
 
     std::string name;                                                                                   // name of osm file without path
     std::string work_dir;                                                                               // name dir

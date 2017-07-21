@@ -186,9 +186,49 @@ void Graph::parser_osm(std::ifstream &in) {
                         } else if (rest[0] == 'o') {
                             auto from_node = get_id_in_ways(from, via);
                             auto to_node = get_id_in_ways(to,via);
-                            map_edges[from_node].insert({to_node,map_edges[from_node][via] + map_edges[via][to_node]});
+                            if (!map_nodes[from_node].map_rest.empty()){
+                                map_nodes[via].map_rest.insert({from_node, to_node});
+                                one_way[from_node][to_node].insert({via,map_edges[from_node][via]});
+                                map_edges[from_node][to_node] = map_edges[from_node][via] + map_edges[via][to_node];
+                                std::queue<unsigned int> from_from;
+                                from_from.push(from_node);
+                                while(!from_from.empty()){
+                                    auto u = from_from.front();
+                                    from_from.pop();
+                                    if (!map_nodes[u].map_rest.empty()){
+                                        for (auto &v : map_nodes[from_node].map_rest){
+                                            if (v.second == via){
+                                                one_way[v.first][to_node] = one_way[v.first][via];
+                                                one_way[v.first][to_node].insert({via,map_edges[v.first][via]});
+                                                map_edges[v.first][to_node] = map_edges[v.first][via] + map_edges[via][to_node];
+                                                map_edges[v.first].erase(via);
+                                                from_from.push(v.first);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (!map_nodes[to_node].map_rest.empty() && map_nodes[to_node].map_rest.find(via) != map_nodes[to_node].map_rest.end()){
+                                std::map<unsigned int, float,nodes_comp> map;
+                                float len = map_edges[from_node][via];
+                                map.insert({via, len});
+                                map_nodes[via].map_rest.insert({from_node,to_node});
+                                unsigned int via_to = via;
+                                while(map_nodes[to_node].map_rest.find(via_to) != map_nodes[to_node].map_rest.end()){
+                                    unsigned int to_to = map_nodes[to_node].map_rest[via_to];
+                                    len += one_way[via_to][to_to][to_node];
+                                    map.insert({to_node,len});
+                                    via_to = to_node;
+                                    to_node = to_to;
+                                }
+                                one_way[from_node][to_node].insert(map.begin(),map.end());
+                                map_edges[from_node].insert({to_node, map[via_to] + map_edges[via_to][to_node]});
+                            } else {
+                                map_nodes[via].map_rest.insert({from_node, to_node});
+                                one_way[from_node][to_node][via] = map_edges[from_node][via];
+                                map_edges[from_node].insert({to_node,map_edges[from_node][via] + map_edges[via][to_node]});
+                            }
                             map_edges[from_node].erase(via);
-                            one_way[to_node].insert({from_node, via});
                         } else {
                             std::cout << "Unknown restriction" << std::endl;
                             exit(7);
@@ -263,7 +303,9 @@ void Graph::parser_osm(std::ifstream &in) {
 
     for (auto rest : one_way){
         for (auto v : rest.second){
-            out << v.first << " " << v.second << " " << rest.first << std::endl;
+            for (auto w : v.second){
+                out << map_nodes[rest.first].id << " " << map_nodes[w.first].id << " " << map_nodes[v.first].id << std::endl;
+            }
         }
     }
 
@@ -336,16 +378,34 @@ std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source,
             }
         }
 
+
+        if (map_edges[u.first].find(end) == map_edges[u.first].end() && one_way.find(u.first) != one_way.end()){
+            if (one_way[u.first].find(end) != one_way[u.first].end()){
+                short_way[end] = u.first;
+                for(auto &v : one_way[u.first]){
+                    if (v.second.find(end) != v.second.end()){
+                        dist[end] = dist[u.first] + v.second[end];
+                        break;
+                    }
+                }
+                u.first = end;
+            }
+        }
+
         if (u.first == end){
             std::vector<unsigned int> way;
             unsigned int v = end;
             while(1){
                 auto w = short_way[v];
-                if (one_way.find(v) != one_way.end() && one_way[v].find(w) != one_way[v].end()){
-                    way.insert(way.begin(),one_way[v][w]);
+                if (one_way.find(w) != one_way.end() && one_way[w].find(v) != one_way[w].end()){
+                    std::vector<unsigned int> way_2;
+                    for (auto &r : one_way[w][v]){
+                        way_2.push_back(r.first);
+                    }
+                    way.insert(way.begin(),way_2.begin(),way_2.end());
                 }
+                way.insert(way.begin(), w);
                 v = w;
-                way.insert(way.begin(), v);
                 if (v == source){
                     break;
                 }
