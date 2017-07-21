@@ -196,7 +196,7 @@ void Graph::parser_osm(std::ifstream &in) {
                                     auto u = from_from.front();
                                     from_from.pop();
                                     if (!map_nodes[u].map_rest.empty()){
-                                        for (auto &v : map_nodes[from_node].map_rest){
+                                        for (auto &v : map_nodes[u].map_rest){
                                             if (v.second == via){
                                                 one_way[v.first][to_node] = one_way[v.first][via];
                                                 one_way[v.first][to_node].insert({via,map_edges[v.first][via]});

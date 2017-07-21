@@ -18,8 +18,12 @@ int main(int argc, char **argv) {
 
     std::string path = argv[1];
 
+//    auto time = clock();
+
     Graph graph(path);
 
+//    std::cout << (clock() - time)/CLOCKS_PER_SEC << std::endl;
+    
     std::vector<std::string> vector_nodes;
 
     for(int i = 2; i < argc ; i++){
