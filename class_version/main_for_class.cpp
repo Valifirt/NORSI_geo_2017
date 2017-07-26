@@ -11,27 +11,20 @@
 
 int main(int argc, char **argv) {
 
-    if (argc < 4){
+    if (argc < 6){
         std::cout << "Error arg" << std::endl;
         exit(1);
     }
 
     std::string path = argv[1];
 
-//    auto time = clock();
+    std::vector<std::pair<float,float>> vector_nodes;
 
-    Graph graph(path);
-
-//    std::cout << (clock() - time)/CLOCKS_PER_SEC << std::endl;
-    
-    std::vector<std::string> vector_nodes;
-
-    for(int i = 2; i < argc ; i++){
-        std::string point = argv[i];
-        vector_nodes.push_back(point);
+    for(int i = 2; i < argc ; i += 2){
+        vector_nodes.push_back({std::stof(argv[i]), std::stof(argv[i+1])});
     }
 
-    graph.short_way(vector_nodes);
+    Graph graph(path, vector_nodes);
 
     return 0;
 }

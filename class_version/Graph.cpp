@@ -11,10 +11,15 @@
 #include <cstring>
 #include "Graph.h"
 
-Graph::Graph(std::string path) {
+Graph::Graph(std::string path, std::vector<std::pair<float, float>> vector_r) {
 
     this->name = path.substr(path.rfind("/") + 1, path.rfind(".") - path.rfind("/")-1);
     this->work_dir = path.substr(0,path.rfind("/osm") + 1);
+
+    this->vector_route = vector_r;
+    for(int i = 0; i < vector_r.size(); i++){
+        vector_nearest.push_back({0, std::numeric_limits<float>::infinity()});
+    }
 
     std::ifstream f;
     f.open(path);
@@ -22,7 +27,9 @@ Graph::Graph(std::string path) {
         std::cout << "Can't find *.osm file" << std::endl;
         exit(2);
     }
+
     parser_osm(f);
+    short_way();
 }
 
 float deg2rad(float deg) {
@@ -46,15 +53,17 @@ float Graph::long_dist(Node from, Node to) {
     return d*1000;
 }
 
-float Graph::short_dist(Node from, Node to) {
+float Graph::short_dist(std::pair<float,float> from, std::pair<float, float> to) {
     float dlat, dlon;
-    dlat = to.lat - from.lat;
-    dlon = to.lon - from.lon;
+    dlat = to.first - from.first;
+    dlon = to.second - from.second;
 
     return std::sqrt(dlat * dlat + dlon * dlon);
 }
 
 void Graph::parser_osm(std::ifstream &in) {
+
+    auto time = clock();
 
     std::string line;
     unsigned int number_nodes = 1;
@@ -76,6 +85,14 @@ void Graph::parser_osm(std::ifstream &in) {
             map_inf_nodes.insert({node.id,number_nodes});
             map_nodes.insert({number_nodes,node});
 
+            for (int i = 0; i < vector_route.size(); i++){
+                auto dist = short_dist(vector_route[i], {node.lat, node.lon});
+                if (vector_nearest[i].second > dist){
+                    vector_nearest[i].second = dist;
+                    vector_nearest[i].first = number_nodes;
+                }
+            }
+
             number_nodes++;
 
         } else if (line.find("<way") != std::string::npos) {
@@ -83,9 +100,6 @@ void Graph::parser_osm(std::ifstream &in) {
             Way way;
             size_t b = line.find("\"") + 1;
             way.id = line.substr(b, line.find("ver") - b - 2);
-//            if (way.id == "42490814"){
-//                std::cout << "dfgh" << std::endl;
-//            }
 
             bool k = true;
             unsigned int first_node;
@@ -241,6 +255,20 @@ void Graph::parser_osm(std::ifstream &in) {
         }
     }
 
+    for(int i = 0; i < vector_route.size(); i++){
+        Node node;
+        node.lat = vector_route[i].first;
+        node.lon = vector_route[i].second;
+
+        map_nodes.insert({number_nodes,node});
+        vector_dist.push_back(number_nodes);
+
+        map_edges[number_nodes].insert(vector_nearest[i]);
+        map_edges[vector_nearest[i].first].insert({number_nodes,vector_nearest[i].second});
+        number_nodes++;
+    }
+
+    this->t_parse = clock() - time;
     this->n_nodes = number_nodes-1;
 
     std::ofstream out, out_print;
@@ -328,18 +356,23 @@ unsigned int Graph::get_id_in_ways(unsigned int first, unsigned int second) {
     return id;
 }
 
-void Graph::short_way(std::vector<std::string> nodes) {
+void Graph::short_way() {
     std::pair<float, std::vector<unsigned int>> c;
 
-    for(int i = 0; i < nodes.size()-1; i++){
-        auto res = dijkstra(map_inf_nodes[nodes[i]], map_inf_nodes[nodes[i+1]]);
+    auto time = clock();
+
+    for(int i = 0; i < vector_dist.size()-1; i++){
+        auto res = dijkstra(vector_dist[i],vector_dist[i+1]);
         c.first += res.first;
         std::copy(res.second.begin(), res.second.end(), back_inserter(c.second));
     }
 
-    c.second.push_back(map_inf_nodes[nodes[nodes.size()-1]]);
+    c.second.push_back(vector_dist[vector_dist.size()-1]);
+
+    this->t_dijkstra = clock() - time;
 
     output_to_osc(c.first, c.second);
+    output_for_web(c.second);
 }
 
 std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source, unsigned int end) {
@@ -456,4 +489,17 @@ void Graph::output_to_osc(float dist, std::vector<unsigned int> way) {
             "\t\t<tag k=\"distance\" v=\"" << dist << "\"/>\n"
               "\t</relation>\n\t</create>\n</osmChange>";
     w.close();
+}
+
+void Graph::output_for_web(std::vector<unsigned int> way) {
+    std::ofstream f(work_dir + "cpu");
+
+    f << (float)t_parse/CLOCKS_PER_SEC << std::endl;           //Time of parsing in sec
+    f << (float)t_dijkstra/CLOCKS_PER_SEC << std::endl;        // Time of dijkstra in sec
+
+    for (auto &n : way){
+        f << map_nodes[n].lat << " " << map_nodes[n].lon << std::endl;
+    }
+
+    f.close();
 }

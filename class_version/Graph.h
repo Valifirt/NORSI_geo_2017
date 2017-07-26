@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 #include <set>
+#include <ctime>
 
 class Graph {
 
@@ -57,19 +58,26 @@ private:
 
     std::string name;                                                                                   // name of osm file without path
     std::string work_dir;                                                                               // name dir
+    clock_t t_parse, t_dijkstra;
+
     unsigned int n_nodes;
+
+    std::vector<std::pair<float,float>> vector_route;
+    std::vector<std::pair<unsigned int,float>> vector_nearest;
+    std::vector<unsigned int> vector_dist;
 
     unsigned int get_id_in_ways(unsigned int first, unsigned int second);                               // in map first find second
 
     void parser_osm(std::ifstream &in);
     float long_dist(Node from, Node to);
-    float short_dist(Node from, Node to);
+    float short_dist(std::pair<float,float> from, std::pair<float, float> to);
     std::pair<float, std::vector<unsigned int>> dijkstra(unsigned int source, unsigned int end);
     void output_to_osc(float dist, std::vector<unsigned int> way);
+    void output_for_web(std::vector<unsigned int> way);
 
 public:
-    Graph(std::string path);
-    void short_way(std::vector<std::string> nodes);
+    Graph(std::string path, std::vector<std::pair<float,float>> vector_r);
+    void short_way();
 };
 
 
