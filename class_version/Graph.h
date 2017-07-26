@@ -69,11 +69,12 @@ private:
     unsigned int get_id_in_ways(unsigned int first, unsigned int second);                               // in map first find second
 
     void parser_osm(std::ifstream &in);
-    float long_dist(Node from, Node to);
+    float long_dist(std::pair<float,float> from, std::pair<float,float> to);
     float short_dist(std::pair<float,float> from, std::pair<float, float> to);
     std::pair<float, std::vector<unsigned int>> dijkstra(unsigned int source, unsigned int end);
     void output_to_osc(float dist, std::vector<unsigned int> way);
     void output_for_web(std::vector<unsigned int> way);
+    void out_graph();
 
 public:
     Graph(std::string path, std::vector<std::pair<float,float>> vector_r);

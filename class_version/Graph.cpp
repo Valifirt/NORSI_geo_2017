@@ -36,15 +36,15 @@ float deg2rad(float deg) {
     return deg * (M_PI / 180.0f);
 }
 
-float Graph::long_dist(Node from, Node to) {
+float Graph::long_dist(std::pair<float,float> from, std::pair<float,float> to) {
 
 
-    float dLat = deg2rad(to.lat - from.lat);  // deg2rad below
-    float dLon = deg2rad(to.lon - from.lon);
+    float dLat = deg2rad(to.first - from.first);  // deg2rad below
+    float dLon = deg2rad(to.second - from.second);
 
     float a =
             std::sin(dLat / 2) * std::sin(dLat / 2) +
-            std::cos(deg2rad(from.lat)) * std::cos(deg2rad(to.lat)) *
+            std::cos(deg2rad(from.first)) * std::cos(deg2rad(to.first)) *
             std::sin(dLon / 2) * std::sin(dLon / 2);
 
     float c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
@@ -86,7 +86,7 @@ void Graph::parser_osm(std::ifstream &in) {
             map_nodes.insert({number_nodes,node});
 
             for (int i = 0; i < vector_route.size(); i++){
-                auto dist = short_dist(vector_route[i], {node.lat, node.lon});
+                auto dist = long_dist(vector_route[i], {node.lat, node.lon});
                 if (vector_nearest[i].second > dist){
                     vector_nearest[i].second = dist;
                     vector_nearest[i].first = number_nodes;
@@ -123,7 +123,7 @@ void Graph::parser_osm(std::ifstream &in) {
                         l = line.substr(a, line.rfind("\"") - a );
                         if (map_inf_nodes.find(l) != map_inf_nodes.end()){
                             second_node = map_inf_nodes[l];
-                            float len = long_dist(map_nodes[first_node], map_nodes[second_node]);
+                            float len = long_dist({map_nodes[first_node].lat,map_nodes[first_node].lon}, {map_nodes[second_node].lat,map_nodes[second_node].lon});
                             map_edges[first_node].insert({second_node, len});
                             map_edges[second_node].insert({first_node, len});
 //                            way.vector_nodes[first_node] = second_node;
@@ -270,8 +270,10 @@ void Graph::parser_osm(std::ifstream &in) {
 
     this->t_parse = clock() - time;
     this->n_nodes = number_nodes-1;
+//    out_graph();
+}
 
-    std::ofstream out, out_print;
+void Graph::out_graph() {
 
     // version for parse and future work, version for print
     /*
@@ -294,6 +296,8 @@ void Graph::parser_osm(std::ifstream &in) {
      *
      * out_for_print creates *.dot
      * */
+
+    std::ofstream out, out_print;
 
     out.open(work_dir + "graph/" + name + "_graph");
     out_print.open(work_dir + "graph/" + name + "_graph_for_print.dot");
@@ -371,7 +375,7 @@ void Graph::short_way() {
 
     this->t_dijkstra = clock() - time;
 
-    output_to_osc(c.first, c.second);
+//    output_to_osc(c.first, c.second);
     output_for_web(c.second);
 }
 
@@ -391,11 +395,6 @@ std::pair<float, std::vector<unsigned int>> Graph::dijkstra(unsigned int source,
             dist[u.first] = u.second;
         }
 
-        /*
-         *  в short_dist сохраняется предшественник на поворотах!
-         *  в for делать проверку на наличие в map
-         *  и либо записывать, либо нет
-         * */
         auto no = 0;
         if (no_way.find(u.first) != no_way.end() && no_way[u.first].find(short_way[u.first]) != no_way[u.first].end()){
             no = no_way[u.first][short_way[u.first]];
@@ -492,7 +491,7 @@ void Graph::output_to_osc(float dist, std::vector<unsigned int> way) {
 }
 
 void Graph::output_for_web(std::vector<unsigned int> way) {
-    std::ofstream f(work_dir + "cpu");
+    std::ofstream f("../out/points_cpu.txt");
 
     f << (float)t_parse/CLOCKS_PER_SEC << std::endl;           //Time of parsing in sec
     f << (float)t_dijkstra/CLOCKS_PER_SEC << std::endl;        // Time of dijkstra in sec
