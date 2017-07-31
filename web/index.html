@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PathFinder</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v4.2.0/css/ol.css" type="text/css">
+    <script src="https://openlayers.org/en/v4.2.0/build/ol.js"></script>
+    <style>
+        p {
+            font-family: "Noto Mono", monospace;
+            color: black;
+        }
+
+        h2 {
+            font-family: "Noto Sans", sans-serif;
+            color: #9f9aa4;
+        }
+
+        h1 {
+            font-family: "Noto Sans", sans-serif;
+            font-size: 250%;
+            color: #9f9aa4;
+        }
+
+        table {
+            border: none;
+            border-collapse: collapse;
+            padding: 15px;
+        }
+
+        th, tr {
+            border: none;
+        }
+
+        body {
+            background-color: white;
+        }
+
+        button {
+            padding: 25px;
+        }
+
+    </style>
+</head>
+<body>
+
+<table align="center" width="90%">
+    <tr>
+        <td align="center">
+            <h2>CPU</h2>
+            <p id="cpu_time">0ms</p>
+        </td>
+        <td align="center">
+            <h1>Расчёт маршрута</h1>
+        </td>
+        <td align="center">
+            <h2>GPU</h2>
+            <p id="gpu_time">0ms</p>
+        </td>
+    </tr>
+</table>
+
+<div id="map" class="map" style=" width: 100%; height: 75%; position: fixed">
+    <script src="map.js"></script>
+</div>
+
+</body>
+</html>

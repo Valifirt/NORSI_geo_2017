@@ -147,3 +147,4 @@ function show_route(contents, device) {
     //     map.getView().fit(extent, map.getSize());
     // }
 }
+
