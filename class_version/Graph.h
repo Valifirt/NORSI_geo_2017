@@ -41,20 +41,14 @@ private:
         std::string id;
     };
 
-//    struct nodes_comp{
-//        bool operator()(const unsigned int &a, const unsigned int &b){
-//            return (map_nodes[a].lon > map_nodes[b].lon || (map_nodes[a].lon == map_nodes[b].lon && map_nodes[a].lat > map_nodes[b].lat ));
-//        }
-//    };
-
     std::map<std::string, unsigned int> map_inf_nodes;                                                  // map: {string id -> int id(from 1 to n_of_points)}
     std::map<unsigned int,Node> map_nodes;                                                              // map: {int id -> Node}
-    std::unordered_map<unsigned int, std::map<unsigned int, float>> map_edges;  // map: ways: {int id from -> int id in -> len}
+    std::unordered_map<unsigned int, std::map<unsigned int, float>> map_edges;                          // map: ways: {int id from -> int id in -> len}
     std::map<std::string, unsigned int> map_inf_ways;                                                   // map: {string id -> int id (from 1 to n_of_ways)}
     std::map<unsigned int,Way> map_ways;                                                                // map: {int id -> Way}
     std::map<unsigned int, std::map<unsigned int, unsigned int>> no_way;                                // map: {via -> {from,to}} can't create way here
     // (from, to , via is id of nodes)
-    std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, float,nodes_comp>>> one_way;                  // map: {from -> {to, via}} can go only here
+    std::map<unsigned int, std::map<unsigned int, std::map<unsigned int, float,nodes_comp>>> one_way;   // map: {from -> to -> via} can go only here
 
     std::string name;                                                                                   // name of osm file without path
     std::string work_dir;                                                                               // name dir
@@ -70,15 +64,17 @@ private:
 
     void parser_osm(std::ifstream &in);
     float long_dist(std::pair<float,float> from, std::pair<float,float> to);
+    float long_dist(Node from, Node to);
     float short_dist(std::pair<float,float> from, std::pair<float, float> to);
     std::pair<float, std::vector<unsigned int>> dijkstra(unsigned int source, unsigned int end);
     void output_to_osc(float dist, std::vector<unsigned int> way);
     void output_for_web(std::vector<unsigned int> way);
-    void out_graph();
 
 public:
     Graph(std::string path, std::vector<std::pair<float,float>> vector_r);
     void short_way();
+    void out_graph();
+    void out_graph_for_print();
 };
 
 

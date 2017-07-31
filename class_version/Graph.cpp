@@ -14,7 +14,7 @@
 Graph::Graph(std::string path, std::vector<std::pair<float, float>> vector_r) {
 
     this->name = path.substr(path.rfind("/") + 1, path.rfind(".") - path.rfind("/")-1);
-    this->work_dir = path.substr(0,path.rfind("/osm") + 1);
+    this->work_dir = path.substr(0,path.rfind("/data") + 1);
 
     this->vector_route = vector_r;
     for(int i = 0; i < vector_r.size(); i++){
@@ -45,6 +45,23 @@ float Graph::long_dist(std::pair<float,float> from, std::pair<float,float> to) {
     float a =
             std::sin(dLat / 2) * std::sin(dLat / 2) +
             std::cos(deg2rad(from.first)) * std::cos(deg2rad(to.first)) *
+            std::sin(dLon / 2) * std::sin(dLon / 2);
+
+    float c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
+    float d = R * c; // Distance in km
+
+    return d*1000;
+}
+
+float Graph::long_dist(Node from, Node to) {
+
+
+    float dLat = deg2rad(to.lat - from.lat);  // deg2rad below
+    float dLon = deg2rad(to.lon - from.lon);
+
+    float a =
+            std::sin(dLat / 2) * std::sin(dLat / 2) +
+            std::cos(deg2rad(from.lat)) * std::cos(deg2rad(to.lat)) *
             std::sin(dLon / 2) * std::sin(dLon / 2);
 
     float c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
@@ -123,10 +140,9 @@ void Graph::parser_osm(std::ifstream &in) {
                         l = line.substr(a, line.rfind("\"") - a );
                         if (map_inf_nodes.find(l) != map_inf_nodes.end()){
                             second_node = map_inf_nodes[l];
-                            float len = long_dist({map_nodes[first_node].lat,map_nodes[first_node].lon}, {map_nodes[second_node].lat,map_nodes[second_node].lon});
+                            float len = long_dist(map_nodes[first_node], map_nodes[second_node]);
                             map_edges[first_node].insert({second_node, len});
                             map_edges[second_node].insert({first_node, len});
-//                            way.vector_nodes[first_node] = second_node;
                             way.vector_nodes.push_back(second_node);
                             first_node = second_node;
                         }
@@ -142,7 +158,6 @@ void Graph::parser_osm(std::ifstream &in) {
             number_ways++;
 
         }else if(line.find("<relation") != std::string::npos){
-//            auto id_rest = line.substr(line.find("\"")+1, line.find("\" ver") - line.find("\"")-1);
             unsigned int from = 0, to = 0, via = 0;
             while(1){
                 std::getline(in, line);
@@ -186,7 +201,6 @@ void Graph::parser_osm(std::ifstream &in) {
                 } else if (line.find("<tag") != std::string::npos){
                     size_t a = line.find("\"");
                     if (!strcmp(line.substr(a+1,11 ).c_str(), "restriction") && via != 0 && from != 0 && to != 0){
-//                    if (line.substr(a+1,11 )== "restriction" ){
                         std::string rest;
                         rest = line.substr(line.find("v=\"")+3, line.rfind("\"") - line.find("v=\"")-3);
                         if (rest[0] == 'n'){
@@ -270,7 +284,6 @@ void Graph::parser_osm(std::ifstream &in) {
 
     this->t_parse = clock() - time;
     this->n_nodes = number_nodes-1;
-//    out_graph();
 }
 
 void Graph::out_graph() {
@@ -293,22 +306,21 @@ void Graph::out_graph() {
      *             ONLY
      *             from via to
      *             ...
-     *
-     * out_for_print creates *.dot
      * */
 
-    std::ofstream out, out_print;
+    std::string dir_out = work_dir + "graph";
+
+    mkdir(dir_out.c_str(), 0777);
+
+    std::ofstream out;
 
     out.open(work_dir + "graph/" + name + "_graph");
-    out_print.open(work_dir + "graph/" + name + "_graph_for_print.dot");
 
     out << name << std::endl;
     out << "Nodes " << "\n" << n_nodes << std::endl;
-    out_print << "graph {" << std::endl;
 
     for (auto v : map_nodes){
         out << v.first << " " << v.second.id << " "  << v.second.lat << " " << v.second.lon << "\n";
-        out_print << "\t" << v.second.id << " [latitude =" << v.second.lat << ", longitude=" << v.second.lon << "]" << std::endl;
     }
 
     out << "Edges " << std::endl;
@@ -316,11 +328,8 @@ void Graph::out_graph() {
     for (auto v : map_edges){
         for (auto w : v.second){
             out << map_nodes[v.first].id << " " << map_nodes[w.first].id << " " << map_nodes[w.second].id << "\n";
-            out_print << "\t" << v.first << " -- " << w.first << std::endl;
         }
     }
-
-    out_print << "}" << std::endl;
 
     out << "Restriction" << std::endl;
     out << "NO" << std::endl;
@@ -342,6 +351,37 @@ void Graph::out_graph() {
     }
 
     out.close();
+}
+
+void Graph::out_graph_for_print() {
+
+    // version version for print
+    /*
+     * out_for_print creates *.dot
+     * */
+
+    std::string dir_out = work_dir + "graph";
+
+    mkdir(dir_out.c_str(), 0777);
+
+    std::ofstream out_print;
+
+    out_print.open(work_dir + "graph/" + name + "_graph_for_print.dot");
+
+    out_print << "graph {" << std::endl;
+
+    for (auto v : map_nodes){
+        out_print << "\t" << v.second.id << " [latitude =" << v.second.lat << ", longitude=" << v.second.lon << "]" << std::endl;
+    }
+
+    for (auto v : map_edges){
+        for (auto w : v.second){
+            out_print << "\t" << v.first << " -- " << w.first << std::endl;
+        }
+    }
+
+    out_print << "}" << std::endl;
+
     out_print.close();
 }
 
